@@ -1,13 +1,13 @@
 /* ==========================================================
    2. 틀린그림찾기 — 32가지 도안에서 다른 곳 찾기 (쉬움/보통/어려움)
    ========================================================== */
-import { byId, DEX, pick, pickMany } from '../data.js';
+import { byId, DEX, pick, pickMany, shuffle } from '../data.js';
 import { qs, qsa, save } from '../core.js';
 import { THEMES, decor, sceneFrontHTML, nextTheme, themeInfo } from './scene.js';
 
 const CFG = {
   easy: { n: 3, minW: 12, muts: ['gone', 'swap', 'hue'] },
-  normal: { n: 5, minW: 8, muts: ['gone', 'swap', 'hue', 'big', 'flip'] },
+  normal: { n: 5, minW: 8, muts: ['gone', 'swap', 'hue', 'big'] },
   hard: { n: 7, minW: 5, muts: ['gone', 'swap', 'hue', 'big', 'flip', 'rot'] },
 };
 const ROUNDS = 3;
@@ -19,7 +19,7 @@ const SYMMETRIC = new Set([
   'rails', 'bandSand', 'bandSnow', 'bandGrass', 'bandLava', 'bandWaves', 'bandPath',
   'bandDeck', 'bandTile', 'bandCave', 'bandStone', 'bandCloud', 'bandDarkGrass',
   'bamboo', 'arch', 'pyramid', 'tank', 'glassPane', 'pond', 'dune', 'hill', 'hill2',
-  'table', 'window', 'bench', 'pillar', 'stairs',
+  'table', 'window', 'bench', 'pillar', 'stairs', 'fence', 'bush', 'bat', 'pine', 'lantern',
 ]);
 
 /* 색이 거의 없어 hue 회전이 티나지 않는 소품 */
@@ -28,7 +28,7 @@ const NEUTRAL = new Set([
   'fence', 'rail', 'clock', 'gem', 'crystal', 'iceberg', 'igloo', 'snowman', 'sheep', 'hay',
   'dune', 'tank', 'glassPane', 'window', 'lighthouse', 'cityTower', 'train', 'bookshelf', 'tower',
   'moon', 'sun', 'snowman', 'igloo', 'iceberg', 'sheep', 'snowPine', 'hay', 'star', 'sparkle',
-  'bubble', 'planet', 'bamboo', 'stairs',
+  'bubble', 'planet', 'bamboo', 'stairs', 'vine',
 ]);
 
 /* 배경 판이라 '차이'로 쓰기엔 티가 안 나는 요소 */
@@ -37,7 +37,8 @@ const BACKGROUND = new Set(['hill', 'hill2', 'dune', 'aurora', 'pond', 'waves', 
   'bandCloud', 'bandDarkGrass']);
 /* 크기를 키워도 티가 잘 안 나는 요소 */
 const NO_BIG = new Set(['cloud', 'moon', 'sun', 'star', 'sparkle', 'bubble', 'snowman', 'igloo',
-  'iceberg', 'hay', 'snowPine', 'sheep']);
+  'iceberg', 'hay', 'snowPine', 'sheep', 'pillar', 'arch', 'table', 'bench', 'fence', 'streetlamp',
+  'log', 'stump', 'rail', 'clock']);
 
 const POKE_SLOTS = [
   { x: 44, y: 50, w: 23, h: 23 },
@@ -103,61 +104,66 @@ export default {
       return themeKey;
     }
 
+    function pickKind(it) {
+      let kinds = D.muts.filter((k) => k !== 'swap'
+        && !(SYMMETRIC.has(it.t) && (k === 'flip' || k === 'rot'))
+        && !(k === 'hue' && NEUTRAL.has(it.t))
+        && !(k === 'big' && NO_BIG.has(it.t)));
+      if (!kinds.length) kinds = ['gone'];
+      return pick(kinds);
+    }
+
     function buildRound() {
       const theme = themeInfo(themeKey);
-      const base = theme.items.filter((i) => !isBand(i) && !BACKGROUND.has(i.t) && i.w >= D.minW && i.h >= D.minW * 0.7 && (i.o == null || i.o > 0.6));
-      // 난이도에 따라 크기가 큰 소품 ~ 작은 소품 고르기
-      const sorted = base.slice().sort((a, b) => b.w * b.h - a.w * a.h);
-      let pool;
-      if (ctx.difficulty === 'easy') pool = sorted.slice(0, Math.max(10, D.n * 3));
-      else if (ctx.difficulty === 'hard') pool = sorted.slice(Math.floor(sorted.length / 3));
-      else pool = sorted.slice(0, Math.max(14, Math.floor(sorted.length * 0.75)));
+      const base = theme.items.filter((i) => !isBand(i) && !BACKGROUND.has(i.t)
+        && i.w >= D.minW && i.h >= D.minW * 0.7 && (i.o == null || i.o > 0.6));
 
       const pokes = pickMany(DEX.filter((p) => p.h >= 0.6 && p.h <= 1.9), 2);
       const pokeItems = POKE_SLOTS.map((s, i) => ({
         t: 'poke', x: s.x, y: s.y, w: s.w, h: s.h, id: pokes[i].id, n: pokes[i].n,
       }));
 
-      const chosen = [];
-      const wantN = D.n;
-      // 1) 포켓몬 차이 하나는 꼭 넣기
-      chosen.push({ item: pokeItems[0], kind: 'swap', alt: pokes[1].id });
-
-      // 2) 나머지 소품 차이
-      const shuffled = pickMany(pool, pool.length);
-      for (const it of shuffled) {
-        if (chosen.length >= wantN) break;
-        const c = center(it);
-        const farEnough = chosen.every((ch) => {
-          const cc = center(ch.item);
-          return Math.abs(cc.x - c.x) > 19 || Math.abs(cc.top - c.top) > 18;
-        });
-        if (!farEnough) continue;
-        let kinds = D.muts.filter((k) => k !== 'swap');
-        if (SYMMETRIC.has(it.t)) kinds = kinds.filter((k) => k !== 'flip' && k !== 'rot');
-        if (NEUTRAL.has(it.t)) kinds = kinds.filter((k) => k !== 'hue');
-        if (NO_BIG.has(it.t)) kinds = kinds.filter((k) => k !== 'big');
-        if (!kinds.length) kinds = ['gone'];
-        const kind = pick(kinds);
-        chosen.push({ item: it, kind });
+      /* 장면을 8칸으로 나눠 한 칸에 차이 하나씩 → 서로 겹치지 않고 골고루 */
+      const zones = [];
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 4; c++) {
+          zones.push({ x0: c * 25, x1: (c + 1) * 25, y0: r * 33.34, y1: (r + 1) * 33.34 });
+        }
       }
-      // 3) 자리가 모자라면 조금 덜 떨어진 후보까지 (겹치지 않을 만큼만)
-      if (chosen.length < wantN) {
-        for (const it of shuffled) {
-          if (chosen.length >= wantN) break;
-          if (chosen.some((c) => c.item === it)) continue;
+      const used = new Set();
+      const chosen = [{ item: pokeItems[0], kind: 'swap', alt: pokes[1].id }];
+      const pc = center(pokeItems[0]);
+      const freeZones = shuffle(zones.filter((z) => !(pc.x >= z.x0 && pc.x < z.x1 && pc.top >= z.y0 && pc.top < z.y1)));
+
+      for (const z of freeZones) {
+        if (chosen.length >= D.n) break;
+        const cands = base.filter((it) => {
+          if (used.has(it)) return false;
           const c = center(it);
-          const ok2 = chosen.every((ch) => {
+          return c.x >= z.x0 && c.x < z.x1 && c.top >= z.y0 && c.top < z.y1;
+        });
+        if (!cands.length) continue;
+        let list = cands;
+        if (ctx.difficulty === 'easy') list = cands.slice().sort((a, b) => b.w * b.h - a.w * a.h).slice(0, 2);
+        if (ctx.difficulty === 'hard') list = cands.slice().sort((a, b) => a.w * a.h - b.w * b.h).slice(0, 3);
+        const it = pick(list);
+        used.add(it);
+        chosen.push({ item: it, kind: pickKind(it) });
+      }
+
+      // 칸이 모자라면 남은 후보로 (겹치지 않을 만큼만)
+      if (chosen.length < D.n) {
+        for (const it of shuffle(base)) {
+          if (chosen.length >= D.n) break;
+          if (used.has(it)) continue;
+          const c = center(it);
+          const ok = chosen.every((ch) => {
             const cc = center(ch.item);
             return Math.abs(cc.x - c.x) > 11 || Math.abs(cc.top - c.top) > 11;
           });
-          if (!ok2) continue;
-          let kinds = D.muts.filter((k) => k !== 'swap'
-            && !(SYMMETRIC.has(it.t) && (k === 'flip' || k === 'rot'))
-            && !(k === 'hue' && NEUTRAL.has(it.t))
-            && !(k === 'big' && NO_BIG.has(it.t)));
-          if (!kinds.length) kinds = ['gone'];
-          chosen.push({ item: it, kind: pick(kinds) });
+          if (!ok) continue;
+          used.add(it);
+          chosen.push({ item: it, kind: pickKind(it) });
         }
       }
       return { theme, pokeItems, chosen };
