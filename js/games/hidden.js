@@ -129,8 +129,6 @@ export default {
           ctx.win(round >= ROUNDS.length - 1 ? '다 찾았어!' : '한 판 성공!');
         }, 420);
         later(() => next(), 1600);
-      } else {
-        ctx.toast(`찾았다! ${t.p.n} 🎉`, 1200);
       }
     }
 

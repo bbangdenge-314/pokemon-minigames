@@ -328,9 +328,9 @@ const toastLayer = () => document.getElementById('toast-layer');
 export function toast(msg, ms = 1900) {
   const layer = toastLayer();
   if (!layer) return;
+  while (layer.firstChild) layer.removeChild(layer.firstChild);
   const n = el('div', 'toast', msg);
   layer.appendChild(n);
-  while (layer.children.length > 2) layer.removeChild(layer.firstElementChild);
   setTimeout(() => {
     n.classList.add('out');
     setTimeout(() => n.remove(), 320);
