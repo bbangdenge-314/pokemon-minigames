@@ -38,7 +38,8 @@ export default {
       ctx.setRound(round, ROUNDS.length);
       ctx.setTip('몇 마리인지 <b>하나씩 짚으며</b> 세어 보고, 숫자를 눌러요!', '🔢');
 
-      const cols = 4, rows = 3;
+      const cols = count <= 4 ? 2 : count <= 6 ? 3 : 4;
+      const rows = count <= 4 ? 2 : 3;
       const cells = pickMany(Array.from({ length: cols * rows }, (_, i) => i), count);
       const pokes = cells.map((c, i) => {
         const col = c % cols, row = Math.floor(c / cols);
