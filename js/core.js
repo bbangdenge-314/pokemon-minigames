@@ -16,7 +16,7 @@ export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* ---------------- 저장소 ---------------- */
 const KEY = 'pokemon-playground-v1';
-const DEFAULT_STATE = { v: 1, stars: 0, stickers: {}, plays: {}, sound: true };
+const DEFAULT_STATE = { v: 1, stars: 0, stickers: {}, plays: {}, sound: true, difficulty: 'normal', lastTheme: {} };
 
 function loadState() {
   try {
@@ -29,6 +29,8 @@ function loadState() {
       stickers: s.stickers && typeof s.stickers === 'object' ? s.stickers : {},
       plays: s.plays && typeof s.plays === 'object' ? s.plays : {},
       sound: s.sound !== false,
+      difficulty: ['easy', 'normal', 'hard'].includes(s.difficulty) ? s.difficulty : 'normal',
+      lastTheme: s.lastTheme && typeof s.lastTheme === 'object' ? s.lastTheme : {},
     };
   } catch (e) {
     return { ...DEFAULT_STATE };
@@ -54,6 +56,12 @@ export function resetProgress() {
 }
 export const stickerCount = () => Object.keys(state.stickers).length;
 export const hasSticker = (id) => !!state.stickers[id];
+export function setDifficulty(key) {
+  if (!['easy', 'normal', 'hard'].includes(key)) return;
+  state.difficulty = key;
+  saveNow();
+}
+export const difficulty = () => state.difficulty || 'normal';
 
 /* ---------------- 그림 ---------------- */
 const PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(

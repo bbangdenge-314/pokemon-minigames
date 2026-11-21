@@ -1,9 +1,9 @@
 /* ==========================================================
    포켓몬 놀이터 · 앱 (라우팅 · 로비 · 도감 · 게임 실행)
    ========================================================== */
-import { GAMES, DEX, byId, artUrl, typeColor, shuffle, pick } from './data.js';
+import { GAMES, DEX, DIFFS, byId, artUrl, typeColor, shuffle, pick, diffInfo } from './data.js';
 import {
-  state, save, saveNow, resetProgress, stickerCount, hasSticker,
+  state, save, saveNow, resetProgress, stickerCount, hasSticker, setDifficulty,
   sfx, fx, qs, qsa, el, wait, toast, flashText, praise, gentle,
   openModal, closeModal, awardClear, clearModalHTML, preloadPokemon,
   artTag, installImageFallback, PRAISE, GENTLE, starSVG,
@@ -83,6 +83,42 @@ function render() {
   window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
 }
 
+/* ---------------- 난이도 스위치 ---------------- */
+function diffSwitchHTML(id) {
+  return `<div class="diff-switch" id="${id}" role="group" aria-label="난이도 고르기">
+    ${DIFFS.map((d) => `
+      <button class="diff-btn ${state.difficulty === d.key ? 'on' : ''}" data-d="${d.key}"
+        aria-pressed="${state.difficulty === d.key}" title="${d.note}">
+        <span class="ds-stars" aria-hidden="true">${starSVG().repeat(d.stars)}</span>
+        <span class="ds-label">${d.label}</span>
+      </button>`).join('')}
+  </div>`;
+}
+function bindDiffSwitch(root) {
+  const box = qs('.diff-switch', root);
+  if (!box) return;
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('.diff-btn');
+    if (!b) return;
+    const key = b.dataset.d;
+    if (key === state.difficulty) return;
+    setDifficulty(key);
+    sfx.ensure(); sfx.tap();
+    qsa('.diff-btn', box).forEach((x) => {
+      x.classList.toggle('on', x.dataset.d === key);
+      x.setAttribute('aria-pressed', String(x.dataset.d === key));
+    });
+    if (active && active.meta) {
+      const meta = active.meta;
+      toast(`${diffInfo(key).label} 난이도로 다시 시작할게요`, 1500);
+      teardown();
+      renderGame(meta);
+    } else {
+      toast(`${diffInfo(key).label} 난이도로 놀아요!`, 1500);
+    }
+  });
+}
+
 /* ---------------- 로비 ---------------- */
 function renderLobby() {
   topbarTitle.textContent = '포켓몬 놀이터';
@@ -109,11 +145,12 @@ function renderLobby() {
         <div class="hero-copy">
           <span class="hero-kicker">🎈 5살 친구들을 위한 놀이터</span>
           <h1>포켓몬 <span class="hl">놀이터</span></h1>
-          <p class="hero-sub">귀여운 포켓몬 친구들과 <b>10가지 놀이</b>를 해 봐요.<br>놀이를 마치면 <b>포켓몬 스티커</b>를 선물로 받아요!</p>
+          <p class="hero-sub">귀여운 포켓몬 친구들과 <b>10가지 놀이</b>를 해 봐요.<br><b>쉬움·보통·어려움</b> 중에 골라서, 놀이를 마치면 <b>포켓몬 스티커</b>를 받아요!</p>
           <div class="hero-badges">
             <span class="hero-badge">🔍 숨은그림찾기</span>
             <span class="hero-badge">🧩 퍼즐</span>
             <span class="hero-badge">🎵 울음소리</span>
+            <span class="hero-badge">🎨 그림 32가지</span>
             <span class="hero-badge">${starSVG()} ${state.stars}개 별</span>
           </div>
         </div>
@@ -122,6 +159,15 @@ function renderLobby() {
           <img src="${artUrl(133)}" alt="이브이" draggable="false">
           <img src="${artUrl(7)}" alt="꼬부기" draggable="false">
         </div>
+      </section>
+
+      <section class="diff-panel">
+        <div class="diff-panel-head">
+          <h2 class="section-title"><span class="emoji">⭐</span> 난이도를 골라요</h2>
+          <span class="section-note">놀이마다 쉬움 · 보통 · 어려움이 달라져요</span>
+        </div>
+        ${diffSwitchHTML('lobby-diff')}
+        <p class="diff-note">${diffInfo(state.difficulty).note}</p>
       </section>
 
       <section>
@@ -157,6 +203,7 @@ function renderLobby() {
   });
   qs('#go-book').addEventListener('click', () => { sfx.tap(); go('#/book'); });
   qs('#lobby-reset').addEventListener('click', () => askReset(renderLobby));
+  bindDiffSwitch(screen);
   renderTop();
 }
 
@@ -227,9 +274,11 @@ function makeCtx(meta, body, header) {
     root: body,
     meta,
     state, sfx, fx, shuffle,
+    get difficulty() { return state.difficulty || 'normal'; },
+    get diff() { return diffInfo(state.difficulty || 'normal'); },
     art: (p, cls = '', extra = '') => artTag(p, cls, extra),
     artUrl, load: preloadPokemon, wait, el, qs, qsa,
-    toast, praise, gentle, typeColor,
+    toast, praise, gentle, typeColor, openModal, closeModal,
     setTip(text, icon = '💡') {
       const t = qs('.hb-txt', header);
       const i = qs('.hb-icon', header);
@@ -270,6 +319,7 @@ function makeCtx(meta, body, header) {
 }
 
 function renderGame(meta) {
+  teardown();
   const mod = MODULES[meta.id];
   topbarTitle.textContent = meta.title;
   document.body.classList.add('in-game');
@@ -287,9 +337,15 @@ function renderGame(meta) {
         <span class="hb-txt">${mod.howto || meta.tag}</span>
         <img class="hb-poke" src="${artUrl(meta.mascot)}" alt="" draggable="false">
       </div>
+      <div class="game-tools">
+        <span class="gt-label">난이도</span>
+        ${diffSwitchHTML('game-diff')}
+        <span class="gt-note">${diffInfo(state.difficulty).note}</span>
+      </div>
       <div id="game-body"></div>
     </div>`;
   qs('#g-back').addEventListener('click', () => go('#/'));
+  bindDiffSwitch(screen);
   const header = qs('#help-bubble');
   const body = qs('#game-body');
   const ctx = makeCtx(meta, body, header);
@@ -303,6 +359,7 @@ function showHowTo(meta, mod) {
   const { el: box, close } = openModal(`
     <h2>${meta.emoji} ${meta.title}</h2>
     <p style="margin-top:6px">${(mod.howto || meta.tag)}</p>
+    <p class="diff-in-modal">지금 난이도: <b>${diffInfo(state.difficulty).label}</b></p>
     ${mod.tips ? `<ul style="text-align:left;margin:14px auto 0;max-width:380px;padding-left:20px;line-height:1.7;color:#6b6288;font-size:15px">${mod.tips.map((t) => `<li>${t}</li>`).join('')}</ul>` : ''}
     <div class="modal-actions"><button class="btn btn-primary" data-act="ok">알겠어요!</button></div>`);
   box.querySelector('[data-act="ok"]').addEventListener('click', close);

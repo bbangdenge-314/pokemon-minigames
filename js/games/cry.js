@@ -1,9 +1,10 @@
 /* ==========================================================
-   8. 울음소리 맞추기 — 실제 포켓몬 울음소리 듣고 찾기
+   8. 울음소리 맞추기 — 쉬움 3지선다 / 보통 4지선다 / 어려움 6지선다
    ========================================================== */
-import { DEX, artUrl, cryUrl, pick, pickMany } from '../data.js';
-import { qs, qsa } from '../core.js';
+import { DEX, artUrl, pick, pickMany } from '../data.js';
+import { qs } from '../core.js';
 
+const CFG = { easy: 3, normal: 4, hard: 6 };
 const ROUNDS = 3;
 
 export default {
@@ -15,21 +16,21 @@ export default {
     '틀려도 몇 번이든 다시 들을 수 있어요.',
   ],
   mount(ctx) {
+    const n = CFG[ctx.difficulty] || CFG.normal;
     let round = 0;
     let target = null;
     let done = false;
-    let playing = false;
     const timers = [];
     const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
     const body = ctx.root;
 
     function render() {
       target = pick(DEX);
-      const others = pickMany(DEX.filter((p) => p.id !== target.id), 3);
-      const choices = pickMany([target, ...others], 4);
+      const others = pickMany(DEX.filter((p) => p.id !== target.id), n - 1);
+      const choices = pickMany([target, ...others], n);
       done = false;
       ctx.setRound(round, ROUNDS);
-      ctx.setTip('귀를 쫑긋! <b>누구의 울음소리</b>일까요?', '🎵');
+      ctx.setTip(`귀를 쫑긋! <b>누구의 울음소리</b>일까요? (보기 ${n}개)`, '🎵');
 
       body.innerHTML = `
         <div class="stage cry-stage">
@@ -43,7 +44,7 @@ export default {
               <div class="cry-mystery" id="mystery" aria-hidden="true">?</div>
             </div>
             <div class="cry-note" style="font-size:15px" id="cry-sub">다시 듣고 싶으면 스피커를 또 눌러요</div>
-            <div class="cry-choices" id="cry-choices">
+            <div class="cry-choices" id="cry-choices" style="grid-template-columns:repeat(${n <= 4 ? 2 : 3},1fr)">
               ${choices.map((p, i) => `<button class="cry-choice" data-pid="${p.id}">
                 <span class="num">${i + 1}</span><span>${p.n}</span></button>`).join('')}
             </div>
@@ -80,7 +81,7 @@ export default {
         btn.classList.add('right');
         ctx.sfx.correct();
         ctx.sfx.cry(target.id);
-        const isLast = round >= ROUNDS.length - 1;
+        const isLast = round >= ROUNDS - 1;
         reveal();
         later(() => ctx.win(isLast ? '정답이야!' : '딩동댕!'), 300);
         later(() => {

@@ -1,14 +1,15 @@
 /* ==========================================================
-   3. 일부를 가리고 맞추기 — 구름 조각 / 스포트라이트
+   3. 가려진 친구는 누구? — 구름 타일 (쉬움 3×3 / 보통 4×4 / 어려움 5×5)
    ========================================================== */
-import { DEX, artUrl, pick, pickMany, typeColor } from '../data.js';
+import { DEX, artUrl, pick, pickMany } from '../data.js';
 import { qs, qsa } from '../core.js';
 
-const ROUNDS = [
-  { mode: 'tiles', n: 3 },
-  { mode: 'spot', n: 3 },
-  { mode: 'tiles', n: 3 },
-];
+const CFG = {
+  easy: { grid: 3, choices: 3, start: 2, auto: [2800, 6500, 10000] },
+  normal: { grid: 4, choices: 4, start: 2, auto: [7000, 13000] },
+  hard: { grid: 5, choices: 6, start: 1, auto: [13000] },
+};
+const ROUNDS = 3;
 
 export default {
   id: 'cover',
@@ -16,9 +17,11 @@ export default {
   tips: [
     '구름을 콕 누르면 그 조각이 열려요.',
     '아래 <b>한 조각 더</b> 버튼으로 더 볼 수 있어요.',
-    '보기 4개 중에 정답이 하나 있어요.',
+    '보기 중에 정답이 하나 있어요.',
+    '어려움은 구름이 25조각이라 아주 조금씩 보여요!',
   ],
   mount(ctx) {
+    const D = CFG[ctx.difficulty] || CFG.normal;
     let round = 0;
     let done = false;
     let opened = 0;
@@ -28,35 +31,30 @@ export default {
     const body = ctx.root;
 
     function render() {
-      const cfg = ROUNDS[round];
       const pool = DEX.filter((p) => p.h >= 0.4);
       target = pick(pool);
-      const others = pickMany(pool.filter((p) => p.id !== target.id), 3);
-      const choices = pickMany([target, ...others], 4);
+      const others = pickMany(pool.filter((p) => p.id !== target.id), D.choices - 1);
+      const choices = pickMany([target, ...others], D.choices);
       done = false;
       opened = 0;
-      ctx.setRound(round, ROUNDS.length);
-      ctx.setTip(cfg.mode === 'tiles'
-        ? '구름을 하나씩 열어 보세요. <b>누구</b>일까요?'
-        : '손전등이 비추는 곳만 보여요. <b>누구</b>일까요?', cfg.mode === 'tiles' ? '☁️' : '🔦');
-
-      const tiles = cfg.mode === 'tiles' ? `
-        <div class="cover-grid" id="cover-grid" style="grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)">
-          ${Array.from({ length: 9 }, (_, i) => `<button class="cover-tile" data-t="${i}" aria-label="구름 조각 ${i + 1} 열기"></button>`).join('')}
-        </div>` : `<div class="spotlight" id="spot" style="--sx:50%;--sy:48%;--sr:15%"></div>`;
+      ctx.setRound(round, ROUNDS);
+      ctx.setTip(`구름 ${D.grid}×${D.grid}을 하나씩 열어 보세요. <b>누구</b>일까요?`, '☁️');
 
       body.innerHTML = `
         <div class="stage cover-stage">
           <div class="center-col">
-            <div class="cover-art" id="cover-art">
+            <div class="cover-art" id="cover-art" style="--grid:${D.grid}">
               <img src="${artUrl(target.id)}" alt="" draggable="false">
-              ${tiles}
+              <div class="cover-grid" id="cover-grid"
+                style="grid-template-columns:repeat(${D.grid},1fr);grid-template-rows:repeat(${D.grid},1fr)">
+                ${Array.from({ length: D.grid * D.grid }, (_, i) => `<button class="cover-tile" data-t="${i}" aria-label="구름 조각 ${i + 1} 열기"></button>`).join('')}
+              </div>
             </div>
             <div class="cover-hintbar">
               <button class="btn btn-sm btn-sun" id="more">🔎 한 조각 더</button>
-              <span class="chip" id="reveal-note">${cfg.mode === 'tiles' ? '구름을 눌러도 열려요' : '손전등이 조금씩 커져요'}</span>
+              <span class="chip" id="reveal-note">구름을 눌러도 열려요</span>
             </div>
-            <div class="choices four" id="choices">
+            <div class="choices c${D.choices}" id="choices" style="grid-template-columns:repeat(${Math.min(D.choices, 3)},1fr)">
               ${choices.map((p) => `
                 <button class="choice" data-pid="${p.id}">
                   <img class="ch-art" src="${artUrl(p.id)}" alt="" draggable="false">
@@ -71,48 +69,29 @@ export default {
         if (b) answer(b);
       });
       qs('#more', body).addEventListener('click', () => revealMore(true));
-      if (cfg.mode === 'tiles') {
-        const grid = qs('#cover-grid', body);
-        grid.addEventListener('click', (e) => {
-          const t = e.target.closest('.cover-tile');
-          if (t && !t.classList.contains('open')) {
-            t.classList.add('open'); opened++;
-            ctx.sfx.pop();
-          }
-        });
-      }
-      const art = qs('#cover-art', body);
-      art.addEventListener('click', (e) => {
-        if (cfg.mode === 'spot' && !e.target.closest('.choice')) revealMore(true);
+      const grid = qs('#cover-grid', body);
+      grid.addEventListener('click', (e) => {
+        const t = e.target.closest('.cover-tile');
+        if (t && !t.classList.contains('open')) {
+          t.classList.add('open'); opened++;
+          ctx.sfx.pop();
+        }
       });
 
-      // 처음에 두 조각은 열어 주고, 시간이 지나면 하나씩 더 열려요
-      later(() => { revealMore(false); later(() => revealMore(false), 500); }, 260);
-      later(() => { if (!done) revealMore(false); }, 6500);
-      later(() => { if (!done) revealMore(false); }, 12000);
+      // 처음 몇 조각은 열어 주고, 시간이 지나면 하나씩 더 열려요
+      for (let i = 0; i < D.start; i++) later(() => revealMore(false), 260 + i * 320);
+      D.auto.forEach((ms) => later(() => { if (!done) revealMore(false); }, ms));
       ctx.load([target, ...choices]);
     }
 
     function revealMore(byUser) {
       if (done) return;
-      const cfg = ROUNDS[round];
-      if (cfg.mode === 'tiles') {
-        const closed = qsa('.cover-tile:not(.open)', body);
-        if (!closed.length) return;
-        const t = closed[0];
-        t.classList.add('open');
-        opened++;
-        if (byUser) ctx.sfx.pop();
-      } else {
-        const spot = qs('#spot', body);
-        if (!spot) return;
-        const cur = Number((spot.style.getPropertyValue('--sr') || '15%').replace('%', '')) || 15;
-        const next = Math.min(70, cur + (byUser ? 12 : 7));
-        spot.style.setProperty('--sr', next + '%');
-        spot.style.setProperty('--sx', (34 + Math.random() * 32).toFixed(0) + '%');
-        spot.style.setProperty('--sy', (38 + Math.random() * 26).toFixed(0) + '%');
-        if (byUser) ctx.sfx.pop();
-      }
+      const closed = qsa('.cover-tile:not(.open)', body);
+      if (!closed.length) return;
+      const t = pick(closed);
+      t.classList.add('open');
+      opened++;
+      if (byUser) ctx.sfx.pop();
     }
 
     function answer(btn) {
@@ -122,18 +101,16 @@ export default {
         done = true;
         btn.classList.add('right');
         const art = qs('#cover-art', body);
-        qsa('.cover-tile', art).forEach((t, i) => later(() => t.classList.add('open'), i * 45));
-        const spot = qs('#spot', body);
-        if (spot) { spot.style.setProperty('--sr', '120%'); spot.style.setProperty('--sx', '50%'); spot.style.setProperty('--sy', '50%'); }
+        qsa('.cover-tile', art).forEach((t, i) => later(() => t.classList.add('open'), i * 40));
         ctx.sfx.cry(target.id);
         const r = art.getBoundingClientRect();
         ctx.fx.burst(r.left + r.width / 2, r.top + r.height / 2, { n: 24, speed: 7 });
         ctx.toast(`정답! ${target.n}이었어요 🎉`, 1500);
-        const isLast = round >= ROUNDS.length - 1;
+        const isLast = round >= ROUNDS - 1;
         later(() => ctx.win(isLast ? '정답이야!' : pick(['정답!', '맞았어!'])), 420);
         later(() => {
           round++;
-          if (round >= ROUNDS.length) ctx.finish(5);
+          if (round >= ROUNDS) ctx.finish(5);
           else render();
         }, 2100);
       } else {

@@ -1,9 +1,10 @@
 /* ==========================================================
-   7. 포켓몬 조각 퍼즐 — 2×2 / 3×3 조각 맞추기
+   7. 포켓몬 조각 퍼즐 — 쉬움 2×2 / 보통 3×3 / 어려움 4×4
    ========================================================== */
 import { DEX, artUrl, pick, pickMany } from '../data.js';
 import { qs, qsa } from '../core.js';
 
+const CFG = { easy: 2, normal: 3, hard: 4 };
 const ROUNDS = 2;
 
 export default {
@@ -12,10 +13,10 @@ export default {
   tips: [
     '조각 하나를 누르고, 바꾸고 싶은 조각을 누르면 자리가 바뀌어요.',
     '어려우면 <b>힌트</b>를 눌러 완성된 그림을 살짝 봐요.',
-    '2×2는 아주 쉬워요. 익숙해지면 3×3에 도전!',
+    '쉬움 2×2 · 보통 3×3 · 어려움 4×4 난이도로 달라져요.',
   ],
   mount(ctx) {
-    let size = 2;
+    const size = CFG[ctx.difficulty] || CFG.normal;
     let round = 0;
     let order = [];
     let sel = null;
@@ -24,29 +25,6 @@ export default {
     const timers = [];
     const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
     const body = ctx.root;
-
-    function choose() {
-      ctx.setTip('몇 조각으로 맞출까요?', '🧩');
-      const prog = qs('#game-progress');
-      if (prog) prog.textContent = '준비';
-      body.innerHTML = `
-        <div class="stage stage-pad center-col">
-          <h3 style="font-size:clamp(20px,3vw,26px)">몇 조각으로 맞출까요?</h3>
-          <div class="level-row" id="plevels">
-            <button class="level-btn sel" data-n="2"><span>2 × 2</span><small>아주 쉬워요</small></button>
-            <button class="level-btn" data-n="3"><span>3 × 3</span><small>조금 어려워요</small></button>
-          </div>
-          <button class="btn btn-primary btn-lg" id="p-start">시작! 🧩</button>
-          <img src="${artUrl(6)}" alt="" style="width:clamp(92px,16vw,130px);filter:drop-shadow(0 8px 10px rgba(80,60,120,.2))">
-        </div>`;
-      qsa('#plevels .level-btn', body).forEach((b) => b.addEventListener('click', () => {
-        size = Number(b.dataset.n);
-        qsa('#plevels .level-btn', body).forEach((x) => x.classList.remove('sel'));
-        b.classList.add('sel');
-        ctx.sfx.tap();
-      }));
-      qs('#p-start', body).addEventListener('click', () => { round = 0; render(); });
-    }
 
     function shuffledOrder(n) {
       let arr;
@@ -140,7 +118,7 @@ export default {
       }
     }
 
-    choose();
+    render();
     return { destroy() { done = true; timers.forEach((t) => clearTimeout(t)); } };
   },
 };

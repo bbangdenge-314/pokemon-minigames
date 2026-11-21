@@ -1,14 +1,14 @@
 /* ==========================================================
-   4. 같은 카드 짝맞추기 — 6 / 12 / 16장
+   4. 같은 카드 짝맞추기 — 쉬움 6장 / 보통 12장 / 어려움 20장
    ========================================================== */
 import { DEX, artUrl, pickMany } from '../data.js';
 import { qs, qsa } from '../core.js';
 
-const LEVELS = [
-  { n: 6, label: '6장', sub: '아주 쉬워요', cls: 'g6' },
-  { n: 12, label: '12장', sub: '조금 어려워요', cls: 'g12' },
-  { n: 16, label: '16장', sub: '도전!', cls: 'g16' },
-];
+const CFG = {
+  easy: { n: 6, cls: 'g6', rounds: 3 },
+  normal: { n: 12, cls: 'g12', rounds: 2 },
+  hard: { n: 20, cls: 'g20', rounds: 1 },
+};
 
 export default {
   id: 'memory',
@@ -19,7 +19,7 @@ export default {
     '외운 카드를 다시 뒤집어 보세요.',
   ],
   mount(ctx) {
-    let level = null;
+    const D = CFG[ctx.difficulty] || CFG.normal;
     let round = 0;
     let first = null;
     let lock = false;
@@ -27,49 +27,12 @@ export default {
     let moves = 0;
     let pairs = 0;
     let cards = [];
-    const ROUNDS = 2;
     const timers = [];
     const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
     const body = ctx.root;
 
-    function choose() {
-      ctx.setTip('카드 장수를 고르면 시작해요!', '🃏');
-      let sel = 1;
-      body.innerHTML = `
-        <div class="stage stage-pad center-col">
-          <h3 style="font-size:clamp(20px,3vw,26px);text-align:center">몇 장으로 놀까요?</h3>
-          <div class="level-row" id="levels">
-            ${LEVELS.map((l, i) => `<button class="level-btn ${i === 1 ? 'sel' : ''}" data-i="${i}">
-              <span>${l.label}</span><small>${l.sub}</small></button>`).join('')}
-          </div>
-          <button class="btn btn-primary btn-lg" id="m-start">시작! 🃏</button>
-          <img src="${artUrl(39)}" alt="" style="width:clamp(84px,14vw,120px);filter:drop-shadow(0 8px 10px rgba(80,60,120,.2))">
-        </div>`;
-      const prog = qs('#game-progress');
-      if (prog) prog.textContent = '준비';
-      qsa('#levels .level-btn', body).forEach((b) => {
-        b.addEventListener('click', () => {
-          sel = Number(b.dataset.i);
-          qsa('#levels .level-btn', body).forEach((x) => x.classList.remove('sel'));
-          b.classList.add('sel');
-          ctx.sfx.tap();
-        });
-      });
-      qs('#m-start', body).addEventListener('click', () => {
-        level = LEVELS[sel];
-        ctx.sfx.ensure();
-        start();
-      });
-    }
-
-    function start() {
-      if (!level) level = LEVELS[1];
-      round = 0;
-      render();
-    }
-
     function render() {
-      const n = level.n;
+      const n = D.n;
       pairs = n / 2;
       const chosen = pickMany(DEX, pairs);
       cards = pickMany([...chosen, ...chosen], n).map((p, i) => ({ p, id: p.id, i, matched: false, flipped: false }));
@@ -77,7 +40,7 @@ export default {
       lock = false;
       matched = 0;
       moves = 0;
-      ctx.setRound(round, ROUNDS);
+      ctx.setRound(round, D.rounds);
       ctx.setTip(`같은 포켓몬 <b>${pairs}쌍</b>을 찾아보세요. 카드를 콕콕 눌러요!`, '🃏');
 
       body.innerHTML = `
@@ -86,7 +49,7 @@ export default {
             <span class="mem-chip">🔎 짝 ${pairs}쌍</span>
             <span class="mem-chip">🔄 뒤집기 <b id="moves">0</b>번</span>
           </div>
-          <div class="mem-grid ${level.cls}" id="mem">
+          <div class="mem-grid ${D.cls}" id="mem">
             ${cards.map((c, i) => `
               <button class="mem-card" data-i="${i}" aria-label="카드 ${i + 1} 뒤집기">
                 <span class="mem-inner">
@@ -130,11 +93,11 @@ export default {
         first = null;
         if (matched === pairs) {
           lock = true;
-          const last = round >= ROUNDS - 1;
+          const last = round >= D.rounds - 1;
           later(() => ctx.win(last ? '다 맞췄어!' : '짝을 다 찾았어!'), 300);
           later(() => {
             round++;
-            if (round >= ROUNDS) ctx.finish(5);
+            if (round >= D.rounds) ctx.finish(5);
             else render();
           }, 1750);
         }
@@ -153,7 +116,7 @@ export default {
       }, 950);
     }
 
-    choose();
+    render();
     return { destroy() { timers.forEach((t) => clearTimeout(t)); } };
   },
 };

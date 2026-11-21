@@ -1,10 +1,15 @@
 /* ==========================================================
-   6. 키 순서 맞추기 — 작은 친구부터 줄 세우기
+   6. 키 순서 맞추기 — 쉬움 3 / 보통 4 / 어려움 5
    ========================================================== */
 import { DEX, artUrl, pickMany } from '../data.js';
 import { qs, qsa } from '../core.js';
 
-const ROUNDS = [3, 3, 4];
+const CFG = {
+  easy: { n: 3, gap: 0.35, cm: true, sizeMin: .56, sizeRange: .44 },
+  normal: { n: 4, gap: 0.28, cm: true, sizeMin: .72, sizeRange: .28 },
+  hard: { n: 5, gap: 0.24, cm: false, sizeMin: .84, sizeRange: .16 },
+};
+const ROUNDS = 3;
 
 export default {
   id: 'height',
@@ -12,12 +17,13 @@ export default {
   tips: [
     '카드 아래 숫자가 키예요. (예: 40cm)',
     '그림 크기도 키에 따라 조금씩 달라요.',
-    '다 섞여도 괜찮아요. 순서대로 누르면 돼요.',
+    '어려움에서는 숫자가 없어요! 그림과 도감 지식으로 맞혀 보세요.',
   ],
   mount(ctx) {
+    const D = CFG[ctx.difficulty] || CFG.normal;
     let round = 0;
-    let order = [];      // 정답 순서 (작은 → 큰) pokemon 배열
-    let picks = [];      // 사용자가 고른 순서
+    let order = [];
+    let picks = [];
     let locked = false;
     let done = false;
     const timers = [];
@@ -30,21 +36,23 @@ export default {
       const chosen = [];
       for (const p of shuffled) {
         if (chosen.length >= n) break;
-        if (chosen.every((c) => Math.abs(c.h - p.h) >= 0.2)) chosen.push(p);
+        if (chosen.every((c) => Math.abs(c.h - p.h) >= D.gap)) chosen.push(p);
       }
       return chosen.sort((a, b) => a.h - b.h);
     }
 
     function render() {
-      order = pickSet(ROUNDS[round]);
+      order = pickSet(D.n);
+      while (order.length < D.n) order.push(DEX[order.length]);
+      order.sort((a, b) => a.h - b.h);
       picks = [];
       locked = false;
       done = false;
       const shown = pickMany(order, order.length);
       const minH = Math.min(...order.map((p) => p.h));
       const maxH = Math.max(...order.map((p) => p.h));
-      ctx.setRound(round, ROUNDS.length);
-      ctx.setTip(`작은 친구부터 <b>${order.length}명</b>을 순서대로 세워 주세요. 숫자를 잘 봐요!`, '📏');
+      ctx.setRound(round, ROUNDS);
+      ctx.setTip(`작은 친구부터 <b>${order.length}명</b>을 순서대로 세워 주세요.`, '📏');
 
       body.innerHTML = `
         <div class="stage height-stage center-col">
@@ -53,11 +61,12 @@ export default {
           </div>
           <div class="height-cards" id="cards">
             ${shown.map((p) => {
-              const k = (0.58 + ((p.h - minH) / Math.max(0.001, maxH - minH)) * 0.36) * 100;
+              const ratio = maxH === minH ? 1 : (p.h - minH) / (maxH - minH);
+              const k = (D.sizeMin + ratio * D.sizeRange) * 100;
               return `<button class="height-card" data-pid="${p.id}">
                 <span class="hc-art-wrap"><img class="hc-art" style="width:${k.toFixed(0)}%" src="${artUrl(p.id)}" alt="${p.n}" draggable="false"></span>
                 <span class="hc-name">${p.n}</span>
-                <span class="hc-cm">${Math.round(p.h * 100)}cm</span>
+                ${D.cm ? `<span class="hc-cm">${Math.round(p.h * 100)}cm</span>` : `<span class="hc-cm no-cm">?</span>`}
               </button>`;
             }).join('')}
           </div>
@@ -94,11 +103,11 @@ export default {
         locked = true;
         ctx.sfx.correct();
         qsa('#slots .height-slot', body).forEach((s) => { s.style.borderColor = '#8fe0bd'; });
-        const isLast = round >= ROUNDS.length - 1;
+        const isLast = round >= ROUNDS - 1;
         later(() => ctx.win(isLast ? '줄 세우기 성공!' : '정답이야!'), 250);
         later(() => {
           round++;
-          if (round >= ROUNDS.length) ctx.finish(5);
+          if (round >= ROUNDS) ctx.finish(5);
           else render();
         }, 1950);
       } else {

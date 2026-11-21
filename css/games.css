@@ -466,3 +466,132 @@
 .count-ground{position:absolute;inset:0;pointer-events:none;z-index:0;}
 .count-poke{z-index:1;}
 .stage-pad{max-width:780px;margin:0 auto;}
+
+/* ==========================================================
+   난이도 · 도안 선택 · 32가지 배경 (업그레이드)
+   ========================================================== */
+
+/* ---------- 난이도 선택 (로비 + 게임) ---------- */
+.diff-panel{
+  display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;
+  padding:clamp(14px,2.4vw,22px) clamp(12px,2.4vw,20px);
+  border-radius:28px;background:linear-gradient(120deg,#fff8e6,#eef9ff 60%,#f6f0ff);
+  border:4px solid #fff;box-shadow:var(--shadow-sm);
+}
+.diff-panel-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;}
+.diff-panel-head .section-note{margin:0;}
+.diff-switch{display:inline-flex;gap:6px;background:#fff;padding:6px;border-radius:22px;box-shadow:var(--shadow-sm);border:3px solid #f3edff;flex-wrap:nowrap;}
+.diff-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  min-width:96px;min-height:56px;padding:6px 12px;border-radius:16px;
+  background:#faf7ff;border:3px solid transparent;font-family:var(--font-title);
+  transition:transform .12s ease,background .15s ease,border-color .15s ease;
+}
+.diff-btn .ds-stars{font-size:13px;line-height:1;letter-spacing:-1px;}
+.diff-btn .ds-label{font-size:16px;color:var(--ink);}
+.diff-btn:hover{transform:translateY(-2px);background:#fff9e8;}
+.diff-btn.on{background:linear-gradient(180deg,#ffe9a8,#ffd166);border-color:#f2b53f;box-shadow:0 3px 0 #dfa72a;}
+.diff-btn.on .ds-label{color:#6b4a00;}
+.diff-note{font-size:clamp(12px,1.8vw,14px);color:var(--ink-soft);}
+.diff-in-modal{margin-top:8px;font-family:var(--font-title);color:var(--lav-deep) !important;}
+.game-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.game-tools .gt-label{font-family:var(--font-title);font-size:14px;color:var(--ink-soft);}
+.game-tools .gt-note{font-size:12.5px;color:var(--ink-soft);}
+.game-tools .diff-switch{padding:4px;border-radius:18px;border-width:2px;}
+.game-tools .diff-btn{min-width:auto;min-height:38px;padding:4px 10px;border-radius:12px;flex-direction:row;gap:5px;}
+.game-tools .diff-btn .ds-stars{font-size:11px;}
+.game-tools .diff-btn .ds-label{font-size:13.5px;}
+
+/* ---------- 장면 공통 ---------- */
+.scene{background-size:cover;background-position:center;}
+.deco-poke{display:grid;place-items:center;}
+.deco-poke img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(50,40,80,.22));}
+.scene-chip{white-space:nowrap;font-family:var(--font-title);}
+.bar-btns{display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+
+/* 숨은그림찾기: 방해 친구 · 어려움 */
+.hid.decoy{opacity:.98;}
+.hid.decoy.wrong img{animation:shake .45s ease;}
+.hid.decoy.decoy-hit img{filter:drop-shadow(0 0 10px rgba(255,180,90,.9));}
+.hid.found::before{content:attr(data-name);}
+
+/* ---------- 도안 고르기 창 ---------- */
+.modal .picker-sub{font-size:14px;margin-top:4px;}
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin-top:14px;max-height:52vh;overflow:auto;padding:2px;}
+.theme-btn{
+  display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:14px;
+  background:#fff;border:3px solid #efe9fb;box-shadow:var(--shadow-sm);
+  font-family:var(--font-title);font-size:13px;text-align:left;line-height:1.2;
+  transition:transform .1s ease,border-color .15s ease,background .15s ease;
+}
+.theme-btn:hover{transform:translateY(-2px);border-color:#d9cdf8;}
+.theme-btn.on{background:linear-gradient(180deg,#fff3c9,#ffe08a);border-color:#f2b53f;}
+.theme-btn .tb-emoji{font-size:19px;flex-shrink:0;}
+.theme-btn .tb-name{word-break:keep-all;}
+.theme-btn.random{background:linear-gradient(180deg,#f0e9ff,#e2d7ff);border-color:#c9b6ff;}
+@media(max-width:520px){.theme-grid{grid-template-columns:repeat(2,1fr);}}
+
+/* ---------- 메모리 20장 ---------- */
+.mem-grid.g20{grid-template-columns:repeat(5,1fr);max-width:640px;}
+@media(max-width:640px){.mem-grid.g20{grid-template-columns:repeat(4,1fr);}}
+.mem-grid.g20 .mem-card{aspect-ratio:1/1.05;}
+
+/* ---------- 그림자 6쌍 ---------- */
+.shadow-row.many .shadow-card,.shadow-row.many .poke-card{width:clamp(66px,13vw,108px);}
+@media(min-width:1000px){.shadow-row.many .shadow-card,.shadow-row.many .poke-card{width:clamp(78px,8vw,106px);}}
+
+/* ---------- 숫자판 20칸 · 움직이는 친구 ---------- */
+.num-pad.pad12,.num-pad.pad20{gap:clamp(5px,1vw,9px);max-width:640px;}
+.num-pad.pad20 .num-btn,.num-pad.pad12 .num-btn{aspect-ratio:1/.86;font-size:clamp(17px,3vw,23px);border-radius:16px;}
+.count-poke.drift img{animation:countDrift 3.4s ease-in-out infinite alternate;}
+@keyframes countDrift{
+  0%{transform:translate(-4%,3%) rotate(-2deg);}
+  50%{transform:translate(3%,-3%) rotate(2deg);}
+  100%{transform:translate(-2%,-4%) rotate(-1deg);}
+}
+.count-stage .count-field{height:clamp(250px,40vh,380px);}
+
+/* ---------- 작은 화면 정리 ---------- */
+@media(max-width:640px){
+  .diff-switch{gap:4px;padding:4px;}
+  .diff-panel .diff-btn{min-width:0;flex:1 1 0;min-height:52px;padding:5px 6px;}
+  .diff-panel .diff-switch{width:100%;}
+  .diff-panel .diff-btn .ds-label{font-size:14px;}
+  .game-tools .gt-note{display:none;}
+  .game-tools{gap:6px;}
+  .game-tools .diff-btn{min-height:36px;padding:4px 8px;}
+  .game-tools .diff-btn .ds-label{font-size:12.5px;}
+  .game-tools .diff-switch{flex:1;}
+  .game-tools .diff-btn{flex:1;}
+  .hidden-bar{gap:6px;}
+  .hidden-bar .btn-sm{padding:7px 12px;font-size:13px;min-height:42px;}
+  .diff-foot{gap:6px;}
+  .diff-foot .btn-sm{padding:7px 11px;font-size:13px;min-height:42px;}
+  .diff-foot .scene-chip{display:none;}
+  .scene{height:clamp(280px,46vh,420px);}
+}
+
+/* 장면 크기 균형 */
+.hidden-stage .scene{height:clamp(300px,46vh,430px);max-width:1080px;margin:0 auto;}
+.diff-pane .scene{height:clamp(220px,34vh,340px);}
+@media(max-width:640px){
+  .hidden-stage .scene{height:clamp(280px,44vh,400px);}
+  .diff-pane .scene{height:clamp(180px,26vh,260px);}
+}
+
+
+/* 난이도 별 아이콘 · 도안/선택 크기 보정 */
+.diff-btn .ds-stars{display:inline-flex;gap:1px;line-height:0;}
+.diff-btn .ds-stars .ic-star{width:12px;height:12px;fill:#e9e3f4;stroke:#cfc6e8;stroke-width:1;}
+.diff-btn.on .ds-stars .ic-star{fill:#ffc94d;stroke:#e0a01f;}
+.diff-pane{height:auto;}
+@media(max-width:560px){
+  .choices .choice{flex-direction:column;gap:2px;padding:8px 4px;min-height:74px;font-size:13px;}
+  .choices .choice .ch-art{width:30px;height:30px;}
+  .choices .choice span{white-space:nowrap;font-size:13px;}
+  .cover-hintbar .chip{font-size:12px;}
+}
+
+/* 그림 라벨이 차이 지점 클릭을 가리지 않도록 */
+.diff-pane .pane-tag{pointer-events:none;}
+.diff-pane .scene-layer.front,.diff-pane .scene-layer.back{pointer-events:none;}

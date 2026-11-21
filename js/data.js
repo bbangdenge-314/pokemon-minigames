@@ -90,6 +90,26 @@ export const DEX = [
 
 export const byId = (id) => DEX.find((p) => p.id === id);
 
+/* ---------------- 난이도 3단계 ---------------- */
+export const DIFFS = [
+  { key: 'easy', label: '쉬움', stars: 1, note: '처음 해 보는 친구에게 딱 맞아요' },
+  { key: 'normal', label: '보통', stars: 2, note: '한두 번 해 봤다면 이 난이도' },
+  { key: 'hard', label: '어려움', stars: 3, note: '자신 있는 친구만 도전!' },
+];
+export const DIFF_KEYS = DIFFS.map((d) => d.key);
+export const diffInfo = (k) => DIFFS.find((d) => d.key === k) || DIFFS[1];
+
+/* 그림자 짝꿍 — 어려움에서 헷갈리는 친구들 묶음 */
+export const SHADOW_SIMILAR = [
+  [133, 134, 135, 136, 196, 197, 700],
+  [25, 26, 183, 35, 36, 39, 40],
+  [4, 6, 37, 38, 58, 59, 77, 155],
+  [1, 3, 152, 252],
+  [7, 9, 54, 55, 129, 130, 158, 258, 393, 79, 80],
+  [147, 148, 149, 380, 334, 142, 123],
+  [63, 65, 150, 280, 282, 385, 151, 113],
+];
+
 /* 타입별 파스텔 색 */
 export const TYPE_COLOR = {
   '노말': '#b8b3a8', '불꽃': '#ff9d76', '물': '#74bdf0', '풀': '#7ed08a',
